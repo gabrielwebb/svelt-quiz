@@ -1,0 +1,94 @@
+<script>
+  import { fade, blur, fly, slide, scale } from "svelte/transition";
+  import { onMount, beforeUpdate, afterUpdate, onDestroy } from "svelte";
+  import Question from "./Question.svelte";
+  import Modal from "./Modal.svelte";
+  let activeQuestion = 0;
+  let score = 0;
+  let quiz = getQuiz();
+  let isModalOpen = false;
+
+  onMount(() => {
+    console.log("i mounted");
+  });
+
+  beforeUpdate(() => {
+    console.log("before update");
+  });
+
+  afterUpdate(() => {
+    console.log("after update");
+  });
+
+  async function getQuiz() {
+    const res = await fetch(
+      "https://opentdb.com/api.php?amount=15&category=15"
+    );
+    const quiz = await res.json();
+    return quiz;
+  }
+
+  function nextQuestion() {
+    activeQuestion = activeQuestion + 1;
+  }
+
+  function resetQuiz() {
+    isModalOpen = false;
+    score = 0;
+    activeQuestion = 0;
+    quiz = getQuiz();
+  }
+
+  function addToScore() {
+    score = score + 1;
+  }
+
+  // Reactive Statement
+  $: if (score > 5) {
+    isModalOpen = true;
+  }
+
+  // Reactive Declaration
+  $: questionNumber = activeQuestion + 1;
+</script>
+
+<style>
+  .fade-wrapper {
+    position: absolute;
+  }
+
+  div {
+    background: white;
+    border: 2px solid black;
+    padding: 20px;
+  }
+</style>
+
+<div>
+  <button on:click={resetQuiz}>Start New Quiz</button>
+
+  <h3>My Score: {score}</h3>
+  <h4>Question #{questionNumber}</h4>
+
+  {#await quiz}
+    Loading....
+  {:then data}
+
+    {#each data.results as question, index}
+      {#if index === activeQuestion}
+        <div in:fly={{ x: 100 }} out:fly={{ x: -200 }} class="fade-wrapper">
+          <Question {addToScore} {nextQuestion} {question} />
+        </div>
+      {/if}
+    {/each}
+
+  {/await}
+</div>
+
+{#if isModalOpen}
+  <Modal on:close={resetQuiz}>
+    <h2>You won!</h2>
+    <p>Congratulations</p>
+    <button on:click={resetQuiz}>Start Over</button>
+  </Modal>
+{/if}
